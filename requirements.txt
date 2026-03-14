@@ -1,0 +1,15 @@
+# 基础框架
+fastapi[standard]
+
+# 异步数据库驱动
+aiomysql
+
+# 数据库ORM
+sqlalchemy
+#mysqlclient
+
+# 业务逻辑与网络通信
+httpx
+# requests
+websocket-client
+python-multipart
