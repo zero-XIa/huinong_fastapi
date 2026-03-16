@@ -57,7 +57,9 @@
 - **返回示例 (200 OK)**:
     ```json
     {
-      "message": "Login successful"
+      "message": "登录成功",
+      "user_id": 1,
+      "username": "user123"
     }
     ```
 
@@ -75,7 +77,7 @@
     ```json
     {
       "disease_name": "水稻稻瘟病",
-      "advice": "建议喷施三环唑...",
+      "advice": "建议喷施三环唑，并加强田间水分管理，避免氮肥过量。",
       "confidence": 0.98
     }
     ```
@@ -174,14 +176,23 @@
     ```json
     { "content": "水稻叶子发黄怎么办？" }
     ```
-- **接收报文 (逐字返回)**:
-    ```json
-    {
-      "role": "ai",
-      "content": "水",
-      "is_end": false
-    }
-    ```
+- **接收报文**:
+    - **流式返回 (逐字)**:
+        ```json
+        {
+          "role": "ai",
+          "content": "水",
+          "is_end": false
+        }
+        ```
+    - **结束标识**:
+        ```json
+        {
+          "role": "ai",
+          "content": "",
+          "is_end": true
+        }
+        ```
 
 ---
 ## 6. 状态码说明
