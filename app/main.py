@@ -26,7 +26,10 @@ async def lifespan(app: FastAPI):
 # 初始化 FastAPI 并注入 lifespan
 app = FastAPI(title="HUINONG 后端系统", lifespan=lifespan)
 
-# CORS策略拦截????
+# 注册路由（必须在 CORS 中间件之前）
+app.include_router(api_router)
+
+# CORS策略拦截（必须在路由注册之后）
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 现阶段允许所有来源，方便调试
@@ -34,9 +37,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# 注册路由
-app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 async def welcome():

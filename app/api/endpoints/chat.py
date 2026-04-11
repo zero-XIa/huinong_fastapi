@@ -1,37 +1,92 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-import json
-import asyncio
+from fastapi import APIRouter, UploadFile, File, Form, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from app.db.session import get_db
+from app.core.config import settings
+from app.models.crop import Message
+from app.models.user import User
+import httpx
+import os
+import shutil
+import uuid
 
 router = APIRouter()
 
-@router.websocket("/ws/chat/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int):
-    # 1. 建立与 Flutter 前端的连接
-    await websocket.accept()
-    
-    try:
-        while True:
-            # 接收前端发送的消息（对应功能模块图中的多模态问题输入）
-            data = await websocket.receive_text()
-            user_msg = json.loads(data)
-            
-            # 2. 模拟调用大模型 WSS 接口并实现流式回复
-            # 实际开发时，你会在这里通过 websockets 库连接大模型 API
-            full_response = "根据您的描述，这可能是由于连日阴雨导致的水稻纹枯病。建议：1. 及时排水晒田；2. 使用井冈霉素进行防治。"
-            
-            # 模拟“打字机”效果：将回复拆分成字符流发送
-            for char in full_response:
-                await websocket.send_json({
-                    "role": "ai",
-                    "content": char,
-                    "is_end": False
-                })
-                await asyncio.sleep(0.05)  # 模拟网络延迟和打字节奏
-            
-            # 发送结束标识
-            await websocket.send_json({"role": "ai", "content": "", "is_end": True})
-            
-            # 3. TODO: 将完整的对话存入 tb_message 表（对应 E-R 图中的问答消息存证）
+UPLOAD_DIR = "uploads"
 
-    except WebSocketDisconnect:
-        print(f"用户 {user_id} 已断开连接")
+@router.post("/chat")
+async def chat(
+    username: str = Form(...),
+    content: str = Form(...),
+    file: UploadFile = None,
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. 保存图片到本地
+    image_path = None
+    if file:
+        user_dir = os.path.join(UPLOAD_DIR, username)
+        os.makedirs(user_dir, exist_ok=True)
+        file_path = os.path.join(user_dir, file.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        image_path = f"{username}/{file.filename}"
+    
+    # 2. 上传图片到 Dify（如果有）
+    file_id = None
+    if file:
+        try:
+            file.file.seek(0)
+            content_type = file.content_type or f"image/{file.filename.split('.')[-1]}"
+            files = {"file": (file.filename, file.file, content_type)}
+            data = {"user": username}
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{settings.DIFY_API_BASE_URL}/files/upload",
+                    headers={"Authorization": f"Bearer {settings.DIFY_API_KEY}"},
+                    files=files,
+                    data=data
+                )
+                
+                if response.status_code in [200, 201]:
+                    file_id = response.json().get("id")
+        except Exception as e:
+            print(f"上传图片失败: {e}")
+    
+    # 3. 调用 Dify API
+    try:
+        request_data = {
+            "inputs": {},
+            "query": content,
+            "response_mode": "blocking",
+            "user": username
+        }
+        
+        if file_id:
+            request_data["files"] = [{
+                "type": "image",
+                "transfer_method": "local_file",
+                "file_id": file_id
+            }]
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{settings.DIFY_API_BASE_URL}/chat-messages",
+                headers={
+                    "Authorization": f"Bearer {settings.DIFY_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json=request_data,
+                timeout=60.0
+            )
+            
+            if response.status_code != 200:
+                return {"error": f"Dify API 错误: {response.status_code}"}
+            
+            result = response.json()
+            answer = result.get("answer", "")
+            
+            return {"message": "后端连通成功！", "data": result}
+            
+    except Exception as e:
+        return {"error": str(e)}
