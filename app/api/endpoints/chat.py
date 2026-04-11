@@ -1,14 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends
+from fastapi import APIRouter, UploadFile, Form, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from app.db.session import get_db
 from app.core.config import settings
-from app.models.crop import Message
-from app.models.user import User
 import httpx
 import os
 import shutil
-import uuid
 
 router = APIRouter()
 
@@ -21,7 +17,7 @@ async def chat(
     file: UploadFile = None,
     db: AsyncSession = Depends(get_db)
 ):
-    # 1. 保存图片到本地
+    # 保存图片到本地
     image_path = None
     if file:
         user_dir = os.path.join(UPLOAD_DIR, username)
@@ -31,7 +27,7 @@ async def chat(
             shutil.copyfileobj(file.file, buffer)
         image_path = f"{username}/{file.filename}"
     
-    # 2. 上传图片到 Dify（如果有）
+    # 上传图片到 Dify
     file_id = None
     if file:
         try:
@@ -53,7 +49,7 @@ async def chat(
         except Exception as e:
             print(f"上传图片失败: {e}")
     
-    # 3. 调用 Dify API
+    # 调用 Dify API
     try:
         request_data = {
             "inputs": {},
