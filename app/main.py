@@ -6,7 +6,8 @@ from app.api.api_v1 import api_router
 from fastapi.middleware.cors import CORSMiddleware
 # 重要：必须在这里导入所有 model，否则 Base 找不到表结构
 from app.models.user import User
-from app.models.crop import Crop, Identification, Message
+from app.models.identification import Identification
+from app.models.message import Message
 
 
 # 定义生命周期逻辑

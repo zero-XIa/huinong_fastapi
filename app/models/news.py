@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
 from datetime import datetime
 from app.db.base import Base
 
@@ -12,3 +12,4 @@ class News(Base):
     cover_url = Column(String(500))         # 封面图地址
     publish_time = Column(DateTime, default=datetime.now)
     view_count = Column(Integer, default=0)
+    is_deleted = Column(Boolean, default=False)

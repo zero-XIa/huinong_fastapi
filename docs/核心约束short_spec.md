@@ -9,8 +9,17 @@
 ## 二、后端接口基础信息
 - **Base URL**：`http://127.0.0.1:8000/api/v1`
 - **API 版本**：v1，路径前缀 `/api/v1`
-- **认证方式**：JWT Token，有效期 2 小时
-  - 请求头：`Authorization: Bearer <token>`
+- **认证方式**：JWT (JSON Web Token)，无状态认证
+  - 登录成功后，后端返回 `access_token`（JWT），前端存储在本地（如 localStorage 或 SharedPreferences）。
+  - 后续所有需要认证的接口，前端必须在 HTTP 请求头中携带：
+    - `Authorization: Bearer <access_token>`
+  - 后端处理流程：
+    1. 从 `Authorization` 头中提取 token。
+    2. 验证 token 签名和过期时间（使用 `SECRET_KEY`）。
+    3. 从 token 中解析出 `user_id` 和 `role`。
+    4. 可选：根据 `user_id` 查询数据库获取完整用户信息（也可直接信任 token 中的信息）。
+    5. 对于管理员专用接口，检查 token 中的 `role == "admin"`。
+  - Token 有效期：2 小时（可配置）。过期后前端应引导用户重新登录。
   - 不需要认证的接口：`POST /users/register`、`POST /users/login`、`GET /`
 - **请求格式**：
   - 普通数据：`application/json`
@@ -167,7 +176,8 @@
 ```
 ## 九、WebSocket 接口（智能问答）
 
-- **URL**：`ws://127.0.0.1:8000/ws/chat?token=<jwt_token>`
+- **URL**：`ws://127.0.0.1:8000/ws/chat?token=<access_token>`
+- **认证**：是（token 作为查询参数，后端验证 token 后获取 user_id 和 role）
 - **发送报文**：
 ```json
 { "content": "用户问题", "session_id": "可选" }

@@ -17,16 +17,13 @@
 - publish_time: datetime default now
 - view_count: int default 0
 - is_deleted: bool default false
-## tb_crop
-- id: int PK
-- crop_name: str(50) not null
-- description: text
 ## tb_identification
 - id: int PK
 - user_id: int FK -> tb_user.id
 - crop_id: int FK -> tb_crop.id (可选)
 - image_url: str(255) not null
 - disease_name: str(100)
+- crop_name: str(50) 
 - advice: text
 - confidence: float
 - duration: int
