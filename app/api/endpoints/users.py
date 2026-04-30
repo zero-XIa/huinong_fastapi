@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.crud import crud_user
-from app.schemas.user import UserCreate, UserOut, UserLogin
+from app.schemas.user import UserCreate, UserOut, UserLogin, UserUpdate, PasswordUpdate
 from app.api.deps import get_current_user
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.user import User
@@ -74,47 +74,44 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 @router.put("/me")
 async def update_current_user_info(
-    phone: str = None,
-    elder_mode: bool = None,
+    user_update: UserUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 更新用户信息
-    if phone:
-        current_user.phone = phone
-    if elder_mode is not None:
-        current_user.elder_mode = elder_mode
+    user = await db.merge(current_user)
+    if user_update.phone:
+        user.phone = user_update.phone
+    if user_update.elder_mode is not None:
+        user.elder_mode = user_update.elder_mode
     
-    db.add(current_user)
     await db.commit()
-    await db.refresh(current_user)
+    await db.refresh(user)
     
     return {
         "code": 200,
         "message": "success",
         "data": {
-            "id": current_user.id,
-            "username": current_user.username,
-            "phone": current_user.phone,
-            "elder_mode": current_user.elder_mode,
-            "role": current_user.role,
-            "create_time": current_user.create_time.isoformat() if current_user.create_time else None
+            "id": user.id,
+            "username": user.username,
+            "phone": user.phone,
+            "elder_mode": user.elder_mode,
+            "role": user.role,
+            "create_time": user.create_time.isoformat() if user.create_time else None
         }
     }
 
 @router.put("/password")
 async def update_password(
-    old_password: str,
-    new_password: str,
+    password_update: PasswordUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not verify_password(old_password, current_user.password):
+    if not verify_password(password_update.old_password, current_user.password):
         raise HTTPException(status_code=400, detail="旧密码错误")
 
-    current_user.password = hash_password(new_password)
+    user = await db.merge(current_user)
+    user.password = hash_password(password_update.new_password)
     
-    db.add(current_user)
     await db.commit()
     
     return {

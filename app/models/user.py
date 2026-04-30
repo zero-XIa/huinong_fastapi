@@ -10,5 +10,5 @@ class User(Base):
     password = Column(String(128), nullable=False)
     phone = Column(String(20), unique=True)
     create_time = Column(DateTime, server_default=func.now())
-    elder_mode = False
-    role = 'user'
+    elder_mode = Column(Boolean, default=False)
+    role = Column(String(20), default='user')

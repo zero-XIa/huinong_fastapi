@@ -6,41 +6,39 @@ from app.core.security import hash_password
 
 # 根据用户名查找用户
 async def get_user_by_username(db: AsyncSession, username: str):
-    # 使用更灵活的查询方式，只查询必要的字段
     from sqlalchemy import text
-    query = text("SELECT id, username, password, phone FROM tb_user WHERE username = :username")
+    query = text("SELECT id, username, password, phone, elder_mode, role, create_time FROM tb_user WHERE username = :username")
     result = await db.execute(query, {"username": username})
     row = result.fetchone()
     if not row:
         return None
-    # 创建用户对象，设置默认值
     user = User(
         id=row.id,
         username=row.username,
         password=row.password,
         phone=row.phone,
-        elder_mode=False,
-        role='user'
+        elder_mode=bool(row.elder_mode) if row.elder_mode is not None else False,
+        role=row.role if row.role is not None else 'user',
+        create_time=row.create_time
     )
     return user
 
 # 根据 ID 查找用户
 async def get_user_by_id(db: AsyncSession, user_id: int):
-    # 使用更灵活的查询方式，只查询必要的字段
     from sqlalchemy import text
-    query = text("SELECT id, username, password, phone FROM tb_user WHERE id = :user_id")
+    query = text("SELECT id, username, password, phone, elder_mode, role, create_time FROM tb_user WHERE id = :user_id")
     result = await db.execute(query, {"user_id": user_id})
     row = result.fetchone()
     if not row:
         return None
-    # 创建用户对象，设置默认值
     user = User(
         id=row.id,
         username=row.username,
         password=row.password,
         phone=row.phone,
-        elder_mode=False,
-        role='user'
+        elder_mode=bool(row.elder_mode) if row.elder_mode is not None else False,
+        role=row.role if row.role is not None else 'user',
+        create_time=row.create_time
     )
     return user
 
