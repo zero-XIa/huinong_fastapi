@@ -16,7 +16,7 @@ async def read_news(
     db: AsyncSession = Depends(get_db)
 ):
     news_list = await crud_news.get_news_list(db, skip=skip, limit=limit)
-    total = len(news_list)
+    total = await crud_news.get_news_count(db)
     return {
         "code": 200,
         "message": "success",

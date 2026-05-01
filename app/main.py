@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.models.user import User
 from app.models.identification import Identification
 from app.models.message import Message
+from app.models.news import News
 
 
 # 定义生命周期逻辑
