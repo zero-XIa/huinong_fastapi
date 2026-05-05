@@ -2,15 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.crud.crud_identification import create_identification, get_identification, get_identifications, delete_identification, count_identifications
-from app.schemas.identification import Identification, IdentificationCreate, IdentificationResponse, IdentificationHistory, IdentificationHistoryDetail
+from app.schemas.identification import IdentificationCreate
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.utils.file_utils import validate_image_file, save_upload_file
 from app.utils.dify_client import upload_file_to_dify, call_dify_workflow
 import time
-from typing import List
 
 router = APIRouter()
+
+
+def _format_time(dt):
+    return dt.isoformat() + "Z" if dt else None
+
 
 @router.post("/identify")
 async def identify_crop(
@@ -98,7 +102,7 @@ async def identify_crop(
             "advice": db_identification.advice,
             "confidence": db_identification.confidence,
             "duration": db_identification.duration,
-            "create_time": db_identification.create_time
+            "create_time": _format_time(db_identification.create_time)
         }
     }
 
@@ -123,7 +127,7 @@ async def get_identification_history(
                     "crop_name": ident.crop_name,
                     "disease_name": ident.disease_name,
                     "confidence": ident.confidence,
-                    "create_time": ident.create_time
+                    "create_time": _format_time(ident.create_time)
                 }
                 for ident in identifications
             ]
@@ -151,7 +155,7 @@ async def get_identification_detail(
             "advice": identification.advice,
             "confidence": identification.confidence,
             "duration": identification.duration,
-            "create_time": identification.create_time
+            "create_time": _format_time(identification.create_time)
         }
     }
 

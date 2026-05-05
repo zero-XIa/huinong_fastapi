@@ -1,10 +1,17 @@
 from fastapi import FastAPI
-from contextlib import asynccontextmanager # 导入上下文管理器
+from contextlib import asynccontextmanager
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from app.db.base import Base
 from app.db.session import engine
 from app.api.api_v1 import api_router
-from fastapi.middleware.cors import CORSMiddleware
-# 重要：必须在这里导入所有 model，否则 Base 找不到表结构
+from app.core.exception_handlers import (
+    http_exception_handler,
+    validation_exception_handler,
+    generic_exception_handler,
+)
 from app.models.user import User
 from app.models.identification import Identification
 from app.models.message import Message
@@ -28,10 +35,21 @@ async def lifespan(app: FastAPI):
 # 初始化 FastAPI 并注入 lifespan
 app = FastAPI(title="HUINONG 后端系统", lifespan=lifespan)
 
-# 注册路由（必须在 CORS 中间件之前）
+# 注册异常处理器
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
+
+# 注册路由
 app.include_router(api_router)
 
-# CORS策略拦截（必须在路由注册之后）
+# 挂载静态文件目录（本地图片访问）
+import os
+uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+
+# CORS策略拦截
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 现阶段允许所有来源，方便调试

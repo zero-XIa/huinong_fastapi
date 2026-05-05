@@ -9,13 +9,16 @@ from app.models.user import User
 
 router = APIRouter()
 
+
+def _format_time(dt):
+    return dt.isoformat() + "Z" if dt else None
+
+
 @router.post("/register")
 async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
-    # 1. 检查用户是否存在
     user = await crud_user.get_user_by_username(db, username=user_in.username)
     if user:
-        raise HTTPException(status_code=400, detail="用户名已被注册")
-    # 2. 创建用户
+        raise HTTPException(status_code=409, detail={"code": 40901, "message": "用户名已被注册"})
     db_user = await crud_user.create_user(db, user_in)
     return {
         "code": 200,
@@ -26,7 +29,7 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
             "phone": db_user.phone,
             "elder_mode": db_user.elder_mode,
             "role": db_user.role,
-            "create_time": db_user.create_time.isoformat() if db_user.create_time else None
+            "create_time": _format_time(db_user.create_time)
         }
     }
 
@@ -52,7 +55,7 @@ async def login(user_in: UserLogin, db: AsyncSession = Depends(get_db)):
                 "phone": user.phone,
                 "elder_mode": getattr(user, 'elder_mode', False),
                 "role": user_role,
-                "create_time": user.create_time.isoformat() if user.create_time else None
+                "create_time": _format_time(user.create_time)
             }
         }
     }
@@ -68,7 +71,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
             "phone": getattr(current_user, 'phone', None),
             "elder_mode": getattr(current_user, 'elder_mode', False),
             "role": getattr(current_user, 'role', 'user'),
-            "create_time": current_user.create_time.isoformat() if current_user.create_time else None
+            "create_time": _format_time(current_user.create_time)
         }
     }
 
@@ -83,10 +86,10 @@ async def update_current_user_info(
         user.phone = user_update.phone
     if user_update.elder_mode is not None:
         user.elder_mode = user_update.elder_mode
-    
+
     await db.commit()
     await db.refresh(user)
-    
+
     return {
         "code": 200,
         "message": "success",
@@ -96,7 +99,7 @@ async def update_current_user_info(
             "phone": user.phone,
             "elder_mode": user.elder_mode,
             "role": user.role,
-            "create_time": user.create_time.isoformat() if user.create_time else None
+            "create_time": _format_time(user.create_time)
         }
     }
 
@@ -107,13 +110,13 @@ async def update_password(
     current_user: User = Depends(get_current_user)
 ):
     if not verify_password(password_update.old_password, current_user.password):
-        raise HTTPException(status_code=400, detail="旧密码错误")
+        raise HTTPException(status_code=400, detail={"code": 40001, "message": "旧密码错误"})
 
     user = await db.merge(current_user)
     user.password = hash_password(password_update.new_password)
-    
+
     await db.commit()
-    
+
     return {
         "code": 200,
         "message": "success",
@@ -122,11 +125,10 @@ async def update_password(
 
 @router.get("/admin/users")
 async def get_admin_users(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # 检查管理员权限
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail={"code": 40301, "message": "角色不匹配"})
-    
-    # 模拟返回用户列表
+
+    # TODO: 实现真实数据库查询，当前为占位模拟数据
     return {
         "code": 200,
         "message": "success",
@@ -137,7 +139,7 @@ async def get_admin_users(db: AsyncSession = Depends(get_db), current_user: User
                     "username": "admin",
                     "phone": "13800138000",
                     "role": "admin",
-                    "create_time": "2024-01-01 12:00:00"
+                    "create_time": "2024-01-01T12:00:00Z"
                 }
             ]
         }

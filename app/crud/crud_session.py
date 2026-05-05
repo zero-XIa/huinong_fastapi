@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
-from datetime import datetime
+from sqlalchemy import select, update, delete, func
+from datetime import datetime, timezone
 from app.models.session import Session
 
 
@@ -9,7 +9,7 @@ async def create_session(db: AsyncSession, user_id: int, session_id: str, title:
         user_id=user_id,
         session_id=session_id,
         title=title,
-        last_message_time=datetime.utcnow()
+        last_message_time=datetime.now(timezone.utc)
     )
     db.add(db_session)
     await db.commit()
@@ -28,11 +28,10 @@ async def get_session_by_id(db: AsyncSession, session_id: str, user_id: int) -> 
 
 
 async def get_sessions(db: AsyncSession, user_id: int, skip: int = 0, limit: int = 20) -> tuple[list[Session], int]:
-    # 获取总数
     count_result = await db.execute(
-        select(Session).where(Session.user_id == user_id)
+        select(func.count()).select_from(Session).filter(Session.user_id == user_id)
     )
-    total = len(count_result.scalars().all())
+    total = count_result.scalar() or 0
     
     # 获取分页数据
     result = await db.execute(
@@ -50,7 +49,7 @@ async def update_session_last_message_time(db: AsyncSession, session_id: str) ->
     await db.execute(
         update(Session)
         .where(Session.session_id == session_id)
-        .values(last_message_time=datetime.utcnow())
+        .values(last_message_time=datetime.now(timezone.utc))
     )
     await db.commit()
 

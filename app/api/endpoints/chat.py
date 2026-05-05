@@ -7,7 +7,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.crud import crud_session, crud_message
 from app.utils.dify_client import call_dify_workflow, upload_file_to_dify
-from app.utils.file_utils import validate_image_file
+from app.utils.file_utils import validate_image_file, save_upload_file
 
 router = APIRouter()
 
@@ -120,6 +120,10 @@ async def chat_message_with_image(
         print(f"[chat] 文件校验失败: {e}")
         raise
 
+    # 保存图片到本地
+    image_url = save_upload_file(file, contents)
+    print(f"[chat] 文件保存成功: {image_url}")
+
     # 处理会话 ID
     if not session_id:
         # 生成新会话 ID
@@ -182,7 +186,8 @@ async def chat_message_with_image(
             "message": "success",
             "data": {
                 "answer": answer,
-                "session_id": session_id
+                "session_id": session_id,
+                "image_url": image_url
             }
         }
     except Exception as e:

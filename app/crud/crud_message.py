@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from app.models.message import Message
 
 
@@ -29,14 +29,13 @@ async def bulk_create_messages(db: AsyncSession, messages: list[dict]) -> None:
 
 
 async def get_messages(db: AsyncSession, session_id: str, user_id: int, skip: int = 0, limit: int = 20) -> tuple[list[Message], int]:
-    # 获取总数
     count_result = await db.execute(
-        select(Message).where(
+        select(func.count()).select_from(Message).filter(
             Message.session_id == session_id,
             Message.user_id == user_id
         )
     )
-    total = len(count_result.scalars().all())
+    total = count_result.scalar() or 0
     
     # 获取分页数据
     result = await db.execute(

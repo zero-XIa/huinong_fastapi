@@ -27,8 +27,10 @@ def validate_image_file(file: UploadFile) -> bytes:
 # 保存上传的文件
 def save_upload_file(file: UploadFile, file_content: bytes) -> str:
     try:
-        # 确保 uploads 目录存在
-        upload_dir = "d:\\Code\\Python\\HuiNong\\uploads"
+        upload_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "uploads"
+        )
         os.makedirs(upload_dir, exist_ok=True)
         
         # 生成唯一文件名
