@@ -36,6 +36,10 @@ async def upload_file_to_dify(file_content: bytes, file_name: str, user_id: str)
             
             print(f"[dify] 文件上传成功: upload_file_id={upload_file_id}")
             return upload_file_id
+    except httpx.ReadTimeout:
+        print(f"[dify] 文件上传请求超时")
+        print(traceback.format_exc())
+        raise
     except httpx.RequestError as e:
         print(f"[dify] 文件上传请求错误: {type(e).__name__}: {e}")
         print(traceback.format_exc())
@@ -82,7 +86,7 @@ async def call_dify_workflow(query: str, conversation_id: Optional[str], user_id
     
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=data, timeout=30.0)
+            response = await client.post(url, headers=headers, json=data, timeout=55.0)
             print(f"[dify] 响应状态码: {response.status_code}")
             print(f"[dify] 响应内容: {response.text[:200]}...")
             response.raise_for_status()
@@ -97,6 +101,10 @@ async def call_dify_workflow(query: str, conversation_id: Optional[str], user_id
             
             print(f"[dify] 调用成功: answer={answer[:50]}..., new_conversation_id={new_conversation_id}")
             return answer, new_conversation_id
+    except httpx.ReadTimeout:
+        print(f"[dify] 请求超时")
+        print(traceback.format_exc())
+        raise
     except httpx.RequestError as e:
         print(f"[dify] 请求错误: {type(e).__name__}: {e}")
         print(traceback.format_exc())

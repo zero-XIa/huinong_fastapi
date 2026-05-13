@@ -40,6 +40,7 @@ async def create_news(db: AsyncSession, obj_in: NewsCreate):
         content=obj_in.content,
         category=obj_in.category,
         cover_url=obj_in.cover_url,
+        publish_time=obj_in.publish_time or func.now(),
     )
     db.add(db_news)
     await db.commit()

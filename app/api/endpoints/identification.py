@@ -27,7 +27,7 @@ async def identify_crop(
     
     # 校验并读取文件
     try:
-        file_content = validate_image_file(file)
+        file_content = await validate_image_file(file)
         print(f"[identification] 文件校验成功: {file.filename}")
     except Exception as e:
         print(f"[identification] 文件校验失败: {e}")

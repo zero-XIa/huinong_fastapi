@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean
-from datetime import datetime
+from sqlalchemy.sql import func
 from app.db.base import Base
 
 class News(Base):
@@ -7,9 +7,9 @@ class News(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
-    content = Column(Text, nullable=False)  # 存储 Markdown 或 HTML
-    category = Column(String(50))           # 政策、预警、农技
-    cover_url = Column(String(500))         # 封面图地址
-    publish_time = Column(DateTime, default=datetime.now)
+    content = Column(Text, nullable=False)
+    category = Column(String(50))
+    cover_url = Column(String(500))
+    publish_time = Column(DateTime, server_default=func.now())
     view_count = Column(Integer, default=0)
     is_deleted = Column(Boolean, default=False)

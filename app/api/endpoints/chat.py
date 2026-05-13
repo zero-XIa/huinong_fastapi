@@ -2,6 +2,8 @@ from fastapi import APIRouter, UploadFile, Form, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import uuid
+import os
+import httpx
 from app.db.session import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
@@ -10,6 +12,19 @@ from app.utils.dify_client import call_dify_workflow, upload_file_to_dify
 from app.utils.file_utils import validate_image_file, save_upload_file
 
 router = APIRouter()
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
+
+
+def _cleanup_upload_file(image_url: str):
+    try:
+        file_name = image_url.lstrip("/uploads/")
+        file_path = os.path.join(UPLOAD_DIR, file_name)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"[chat] 孤儿文件已清理: {file_path}")
+    except Exception:
+        pass
 
 
 @router.post("/chat/message")
@@ -114,7 +129,7 @@ async def chat_message_with_image(
 
     # 文件校验
     try:
-        contents = validate_image_file(file)
+        contents = await validate_image_file(file)
         print(f"[chat] 文件校验成功: {file.filename}")
     except Exception as e:
         print(f"[chat] 文件校验失败: {e}")
@@ -124,16 +139,12 @@ async def chat_message_with_image(
     image_url = save_upload_file(file, contents)
     print(f"[chat] 文件保存成功: {image_url}")
 
-    # 处理会话 ID
+    # 处理会话 ID / 新会话标记
+    is_new_session = not session_id
     if not session_id:
-        # 生成新会话 ID
         session_id = uuid.uuid4().hex
-        # 创建会话记录
-        title = "图片问答"
-        await crud_session.create_session(db, user_id=current_user.id, session_id=session_id, title=title)
         dify_conversation_id = None
     else:
-        # 查询会话
         session = await crud_session.get_session_by_id(db, session_id=session_id, user_id=current_user.id)
         if not session:
             raise HTTPException(
@@ -157,8 +168,13 @@ async def chat_message_with_image(
             file_id=upload_file_id
         )
 
-        # 保存 Dify 会话 ID（如果是新会话）
-        if not dify_conversation_id:
+        # Dify 成功后，创建新会话记录（避免孤儿会话）
+        if is_new_session:
+            title = "图片问答"
+            await crud_session.create_session(db, user_id=current_user.id, session_id=session_id, title=title)
+
+        # 保存 Dify 会话 ID
+        if is_new_session:
             await crud_session.update_session_dify_conversation_id(db, session_id=session_id, dify_conversation_id=new_conversation_id)
 
         # 保存消息
@@ -167,7 +183,8 @@ async def chat_message_with_image(
                 "user_id": current_user.id,
                 "session_id": session_id,
                 "role": "user",
-                "content": query
+                "content": query,
+                "image_url": image_url
             },
             {
                 "user_id": current_user.id,
@@ -190,11 +207,19 @@ async def chat_message_with_image(
                 "image_url": image_url
             }
         }
-    except Exception as e:
-        print(f"[chat] Dify 调用失败: {type(e).__name__}: {e}, session_id={session_id}, user_id={current_user.id}")
+    except httpx.ReadTimeout:
+        print(f"[chat] Dify 请求超时: session_id={session_id}, user_id={current_user.id}")
+        _cleanup_upload_file(image_url)
         raise HTTPException(
             status_code=500,
-            detail={"code": 50003, "message": "AI 服务异常"}
+            detail={"code": 50003, "message": "图片分析超时，请稍后重试"}
+        )
+    except Exception as e:
+        print(f"[chat] Dify 调用失败: {type(e).__name__}: {e}, session_id={session_id}, user_id={current_user.id}")
+        _cleanup_upload_file(image_url)
+        raise HTTPException(
+            status_code=500,
+            detail={"code": 50003, "message": "AI 服务异常，请稍后重试"}
         )
 
 
@@ -270,6 +295,7 @@ async def get_chat_messages(
             "id": message.id,
             "role": message.role,
             "content": message.content,
+            "image_url": message.image_url,
             "create_time": message.create_time.isoformat() + "Z"
         }
         for message in messages

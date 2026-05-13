@@ -2,8 +2,7 @@ from fastapi import UploadFile, HTTPException
 import os
 import uuid
 
-# 校验图片文件
-def validate_image_file(file: UploadFile) -> bytes:
+async def validate_image_file(file: UploadFile) -> bytes:
     # 校验文件类型
     allowed_types = ["image/jpeg", "image/png", "image/jpg"]
     if file.content_type not in allowed_types:
@@ -12,8 +11,8 @@ def validate_image_file(file: UploadFile) -> bytes:
             detail={"code": 40001, "message": "请上传 jpg 或 png 格式的图片文件"}
         )
     
-    # 读取文件内容
-    file_content = file.file.read()
+    # 读取文件内容（异步读取）
+    file_content = await file.read()
     
     # 校验文件大小（≤10MB）
     if len(file_content) > 10 * 1024 * 1024:
@@ -27,6 +26,11 @@ def validate_image_file(file: UploadFile) -> bytes:
 # 保存上传的文件
 def save_upload_file(file: UploadFile, file_content: bytes) -> str:
     try:
+        if not file.filename:
+            raise HTTPException(
+                status_code=400,
+                detail={"code": 40001, "message": "文件名为空，请重新上传"}
+            )
         upload_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "uploads"

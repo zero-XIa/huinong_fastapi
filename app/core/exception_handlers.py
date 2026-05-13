@@ -26,12 +26,20 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    errors = []
+    for error in exc.errors():
+        field = ".".join(str(loc) for loc in error["loc"])
+        errors.append({
+            "field": field,
+            "message": error["msg"],
+            "type": error["type"],
+        })
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
             "code": 40001,
             "message": "参数校验失败",
-            "data": None,
+            "data": {"errors": errors},
         },
     )
 

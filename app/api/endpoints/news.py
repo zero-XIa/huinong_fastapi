@@ -15,7 +15,7 @@ def _news_to_dict(news) -> dict:
         "content": news.content,
         "category": news.category,
         "cover_url": news.cover_url,
-        "publish_time": news.publish_time.isoformat() + "Z",
+        "publish_time": news.publish_time.strftime("%Y-%m-%dT%H:%M:%SZ") if news.publish_time else None,
         "view_count": news.view_count,
     }
 

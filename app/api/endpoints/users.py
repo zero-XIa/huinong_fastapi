@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.crud import crud_user
-from app.schemas.user import UserCreate, UserOut, UserLogin, UserUpdate, PasswordUpdate
+from app.schemas.user import UserCreate, UserLogin, UserUpdate, PasswordUpdate
 from app.api.deps import get_current_user
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.user import User
@@ -121,26 +121,4 @@ async def update_password(
         "code": 200,
         "message": "success",
         "data": None
-    }
-
-@router.get("/admin/users")
-async def get_admin_users(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail={"code": 40301, "message": "角色不匹配"})
-
-    # TODO: 实现真实数据库查询，当前为占位模拟数据
-    return {
-        "code": 200,
-        "message": "success",
-        "data": {
-            "list": [
-                {
-                    "id": 1,
-                    "username": "admin",
-                    "phone": "13800138000",
-                    "role": "admin",
-                    "create_time": "2024-01-01T12:00:00Z"
-                }
-            ]
-        }
     }

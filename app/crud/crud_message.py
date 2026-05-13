@@ -20,7 +20,8 @@ async def bulk_create_messages(db: AsyncSession, messages: list[dict]) -> None:
             user_id=msg['user_id'],
             session_id=msg['session_id'],
             role=msg['role'],
-            content=msg['content']
+            content=msg['content'],
+            image_url=msg.get('image_url')
         )
         for msg in messages
     ]

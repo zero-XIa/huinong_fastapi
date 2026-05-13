@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional, List, Literal
 
-NEWS_CATEGORIES = Literal["政策", "预警", "农技"]
+NEWS_CATEGORIES = Literal["政策", "农技", "市场", "预警"]
 
 
 class NewsBase(BaseModel):
@@ -13,7 +13,7 @@ class NewsBase(BaseModel):
 
 
 class NewsCreate(NewsBase):
-    pass
+    publish_time: Optional[datetime] = None
 
 
 class NewsResponse(NewsBase):
