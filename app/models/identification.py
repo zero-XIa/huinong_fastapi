@@ -10,7 +10,7 @@ class Identification(Base):
     image_url = Column(String(255), nullable=False)
     crop_name = Column(String(50), nullable=True)
     disease_name = Column(String(100), nullable=True)
-    advice = Column(Text, nullable=True)
+    characteristics = Column(Text, nullable=True)
     confidence = Column(Float, nullable=True)
     duration = Column(Integer, nullable=True)
     create_time = Column(DateTime, server_default=func.now())

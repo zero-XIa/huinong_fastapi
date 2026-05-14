@@ -11,7 +11,7 @@ async def create_identification(db: AsyncSession, user_id: int, identification_i
         image_url=identification_in.image_url,
         crop_name=identification_in.crop_name,
         disease_name=identification_in.disease_name,
-        advice=identification_in.advice,
+        characteristics=identification_in.characteristics,
         confidence=identification_in.confidence,
         duration=identification_in.duration
     )
